@@ -8,12 +8,8 @@ const Item = require("../models/item");
 const authMiddleware = require("../middleware/authMiddleware");
 router.use(authMiddleware);
 
-// --------------------
-// Multer setup
-// --------------------
 const uploadDir = "uploads/";
 
-// Ensure uploads folder exists
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
@@ -38,9 +34,6 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// --------------------
-// Helper function to delete images
-// --------------------
 const deleteImageFile = (imagePath) => {
   if (!imagePath) return;
   const fullPath = path.join(__dirname, "..", imagePath.replace(/^\//, ""));
@@ -50,11 +43,7 @@ const deleteImageFile = (imagePath) => {
   });
 };
 
-// --------------------
-// Routes
-// --------------------
 
-// Create Item
 router.post("/", upload.single("image"), async (req, res, next) => {
   const { name, price, description } = req.body;
 

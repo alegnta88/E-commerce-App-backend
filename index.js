@@ -14,29 +14,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 app.use("/auth", authRoutes);
 
-// Connect to MongoDB
 connectDB();
 
-// Base route
 app.get("/", (req, res) => {
   res.send("Welcome to Simple CRUD API!");
 });
 
-// Mount routes
 app.use("/items", itemRoutes);
 
-// --------------------
-// 404 Handler
-// --------------------
+
 app.use((req, res, next) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-// --------------------
-// Global Error Handler
-// --------------------
+
 app.use((err, req, res, next) => {
-  console.error("💥 Global Error:", err); // Log the full error
+  console.error("💥 Global Error:", err); 
 
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
@@ -44,5 +37,4 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ success: false, message });
 });
 
-// Start server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
