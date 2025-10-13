@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 
 
 app.use((err, req, res, next) => {
-  console.error("💥 Global Error:", err); 
+  console.error("Global Error:", err); 
 
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
@@ -36,4 +36,4 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ success: false, message });
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Tunning on port ${PORT}`));

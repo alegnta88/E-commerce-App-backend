@@ -24,7 +24,7 @@ const fileFilter = (req, file, cb) => {
   if (isValidExt && isValidMime) {
     cb(null, true);
   } else {
-    console.log(`⚠️ Upload rejected: ${file.originalname} is not an allowed image type.`);
+    console.log(`Upload rejected: ${file.originalname} is not an allowed image type.`);
     const error = new Error("Only image files are allowed!");
     error.statusCode = 400;
     cb(error);
