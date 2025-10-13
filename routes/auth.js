@@ -21,11 +21,10 @@ router.post("/register", async (req, res, next) => {
     const role = await Role.findOne({ name: roleName || "user" });
     if (!role) return res.status(400).json({ message: "Role does not exist" });
 
-    // Pass plain password - schema pre-save hook will hash it
     const user = await User.create({
       name,
       email,
-      password, // Plain password, NOT hashed here
+      password,
       role: role._id
     });
 
@@ -64,7 +63,6 @@ router.post("/login", async (req, res, next) => {
     console.log("Incoming password:", password);
     console.log("Stored hash:", user.password);
     
-    // Use the schema method instead of bcrypt.compare directly
     const isMatch = await user.matchPassword(password);
     console.log("✅ Password match:", isMatch);
     

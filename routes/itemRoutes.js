@@ -42,7 +42,7 @@ const deleteImageFile = (imagePath) => {
   });
 };
 
-// 🟢 GET all items — any logged-in user
+// GET all items
 router.get("/", authMiddleware, async (req, res, next) => {
   try {
     const items = await Item.find();
@@ -52,7 +52,7 @@ router.get("/", authMiddleware, async (req, res, next) => {
   }
 });
 
-// 🟢 GET one item by ID — any logged-in user
+// GET one item by ID
 router.get("/:id", authMiddleware, async (req, res, next) => {
   try {
     const item = await Item.findById(req.params.id);
@@ -67,7 +67,7 @@ router.get("/:id", authMiddleware, async (req, res, next) => {
   }
 });
 
-// 🔒 POST new item — admin only
+// POST new item
 router.post(
   "/",
   authMiddleware,
@@ -93,7 +93,7 @@ router.post(
   }
 );
 
-// 🔒 PUT update item — admin only
+// PUT update item
 router.put(
   "/:id",
   authMiddleware,
@@ -121,7 +121,7 @@ router.put(
   }
 );
 
-// 🔒 DELETE item — admin only
+// DELETE item
 router.delete(
   "/:id",
   authMiddleware,

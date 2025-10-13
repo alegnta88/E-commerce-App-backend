@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Role = require("../models/role");
 
-const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1d";
 
 router.post("/register", async (req, res, next) => {
@@ -22,12 +22,10 @@ router.post("/register", async (req, res, next) => {
     const role = await Role.findOne({ name: roleName || "user" });
     if (!role) return res.status(400).json({ message: "Role does not exist" });
 
-    // Remove this line: const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name,
       email,
-      password, // Pass plain password - schema will hash it
+      password, 
       role: role._id
     });
 
