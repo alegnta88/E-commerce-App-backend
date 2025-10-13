@@ -13,12 +13,19 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   try {
+    // Verify the JWT
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+
+    // Fetch user from DB and populate the role
+    const user = await User.findById(decoded.id).populate("role"); // <--- changed here
+
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid token" });
     }
-    req.user = user; 
+
+    // Attach full user (with role) to request
+    req.user = user;
+
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: "Token expired or invalid" });

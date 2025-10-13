@@ -17,11 +17,10 @@ app.use("/auth", authRoutes);
 connectDB();
 
 app.get("/", (req, res) => {
-  res.send("Welcome to Simple CRUD API!");
+  res.send("Welcome!");
 });
 
 app.use("/items", itemRoutes);
-
 
 app.use((req, res, next) => {
   res.status(404).json({ success: false, message: "Route not found" });

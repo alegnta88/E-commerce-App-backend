@@ -4,12 +4,11 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const Item = require("../models/item");
-
 const authMiddleware = require("../middleware/authMiddleware");
-router.use(authMiddleware);
+const authorizeRoles = require("../middleware/authorizeRoles");
+
 
 const uploadDir = "uploads/";
-
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
@@ -43,28 +42,8 @@ const deleteImageFile = (imagePath) => {
   });
 };
 
-
-router.post("/", upload.single("image"), async (req, res, next) => {
-  const { name, price, description } = req.body;
-
-  if (!name || !price || !description) {
-    const error = new Error("Name, price, and description are required.");
-    error.statusCode = 400;
-    return next(error);
-  }
-
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
-
-  try {
-    const item = await Item.create({ name, price, description, image: imagePath });
-    res.status(201).json(item);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Get All Items
-router.get("/", async (req, res, next) => {
+// 🟢 GET all items — any logged-in user
+router.get("/", authMiddleware, async (req, res, next) => {
   try {
     const items = await Item.find();
     res.json(items);
@@ -73,8 +52,8 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// Get Item by ID
-router.get("/:id", async (req, res, next) => {
+// 🟢 GET one item by ID — any logged-in user
+router.get("/:id", authMiddleware, async (req, res, next) => {
   try {
     const item = await Item.findById(req.params.id);
     if (!item) {
@@ -88,44 +67,81 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-// Update Item
-router.put("/:id", upload.single("image"), async (req, res, next) => {
-  const { name, price, description } = req.body;
-  const updateData = { name, price, description };
+// 🔒 POST new item — admin only
+router.post(
+  "/",
+  authMiddleware,
+  authorizeRoles("admin"),
+  upload.single("image"),
+  async (req, res, next) => {
+    const { name, price, description } = req.body;
 
-  if (req.file) {
-    updateData.image = `/uploads/${req.file.filename}`;
-  }
-
-  try {
-    const updatedItem = await Item.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!updatedItem) {
-      const error = new Error("Item not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    res.json(updatedItem);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Delete Item
-router.delete("/:id", async (req, res, next) => {
-  try {
-    const deletedItem = await Item.findByIdAndDelete(req.params.id);
-    if (!deletedItem) {
-      const error = new Error("Item not found");
-      error.statusCode = 404;
-      throw error;
+    if (!name || !price || !description) {
+      const error = new Error("Name, price, and description are required.");
+      error.statusCode = 400;
+      return next(error);
     }
 
-    deleteImageFile(deletedItem.image);
+    const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-    res.json({ message: "Item deleted successfully" });
-  } catch (err) {
-    next(err);
+    try {
+      const item = await Item.create({ name, price, description, image: imagePath });
+      res.status(201).json(item);
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
+
+// 🔒 PUT update item — admin only
+router.put(
+  "/:id",
+  authMiddleware,
+  authorizeRoles("admin"),
+  upload.single("image"),
+  async (req, res, next) => {
+    const { name, price, description } = req.body;
+    const updateData = { name, price, description };
+
+    if (req.file) {
+      updateData.image = `/uploads/${req.file.filename}`;
+    }
+
+    try {
+      const updatedItem = await Item.findByIdAndUpdate(req.params.id, updateData, { new: true });
+      if (!updatedItem) {
+        const error = new Error("Item not found");
+        error.statusCode = 404;
+        throw error;
+      }
+      res.json(updatedItem);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// 🔒 DELETE item — admin only
+router.delete(
+  "/:id",
+  authMiddleware,
+  authorizeRoles("admin"),
+  async (req, res, next) => {
+    try {
+      const deletedItem = await Item.findByIdAndDelete(req.params.id);
+      if (!deletedItem) {
+        const error = new Error("Item not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      deleteImageFile(deletedItem.image);
+
+      res.json({ message: "Item deleted successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;
