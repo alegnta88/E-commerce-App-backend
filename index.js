@@ -23,9 +23,8 @@ app.use("/users", userRoutes);
 app.use("/items", itemRoutes);
 
 app.use((req, res, next) => {
-  res.status(404).json({ success: false, message: "Route not found" });
+  res.status(404).json({ success: false, message: "This endpoint doesn't exist" });
 });
-
 
 app.use((err, req, res, next) => {
   console.error("Global Error:", err); 
