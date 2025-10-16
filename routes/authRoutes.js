@@ -62,7 +62,7 @@ router.post("/login", async (req, res, next) => {
     const user = await User.findOne({ email }).populate("role");
     if (user) {
       const { _id, name, email, role } = user;
-      console.log("User found in DB:", { _id, name, email, role });
+      console.log("User found in DB: ", { _id, name, email, role });
     }
     
     if (!user) {
@@ -70,10 +70,10 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
     const isMatch1 = await user.matchPassword(password);
-    console.log("matchPassword result:", isMatch1);
-    
+    console.log("Password match result (method 1):", isMatch1);
+
     const isMatch2 = await bcrypt.compare(password, user.password);
-    console.log("bcrypt.compare result:", isMatch2);
+    console.log("Password match result (method 2):", isMatch2);
     
     const isMatch = isMatch1 || isMatch2;
     
