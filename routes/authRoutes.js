@@ -6,11 +6,11 @@ const User = require("../models/user");
 const Role = require("../models/role");
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = "1d";
+const JWT_EXPIRES_IN = "1h";
 
 router.post("/register", async (req, res, next) => {
   try {
-    const { name, email, password, roleName } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -19,18 +19,18 @@ router.post("/register", async (req, res, next) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "Email already exists" });
 
-    const role = await Role.findOne({ name: roleName || "user" });
-    if (!role) return res.status(400).json({ message: "Role does not exist" });
+    const userRole = await Role.findOne({ name: role || "user" });
+    if (!userRole) return res.status(400).json({ message: "Role does not exist" });
 
     const user = await User.create({
       name,
       email,
       password, 
-      role: role._id
+      role: userRole._id
     });
 
     const token = jwt.sign(
-      { id: user._id, role: role.name },
+      { id: user._id, role: userRole.name },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
@@ -41,7 +41,7 @@ router.post("/register", async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: role.name
+        role: userRole.name
       },
       token
     });
@@ -60,19 +60,15 @@ router.post("/login", async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).populate("role");
-    console.log("User found in DB:", user);
+    if (user) {
+      const { _id, name, email, role } = user;
+      console.log("User found in DB:", { _id, name, email, role });
+    }
     
     if (!user) {
       console.log("No user found with email:", email);
       return res.status(401).json({ message: "Invalid email or password" });
     }
-
-    console.log("Comparing passwords...");
-    console.log("User methods available:", typeof user.matchPassword);
-    console.log("Incoming password:", password);
-    console.log("Stored hash:", user.password);
-    
-    // Try both methods to debug
     const isMatch1 = await user.matchPassword(password);
     console.log("matchPassword result:", isMatch1);
     
