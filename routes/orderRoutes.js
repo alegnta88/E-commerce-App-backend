@@ -6,7 +6,6 @@ const Order = require("../models/order");
 const Item = require("../models/item");
 const bus = require("../events/handlers");
 
-// GET current user's orders
 router.get("/", authMiddleware, async (req, res, next) => {
   try {
     const orders = await Order.find({ user: req.user._id })
@@ -19,7 +18,6 @@ router.get("/", authMiddleware, async (req, res, next) => {
   }
 });
 
-// ADMIN: list all orders
 router.get("/admin", authMiddleware, authorizeRoles("admin"), async (req, res, next) => {
   try {
     const orders = await Order.find()
@@ -32,8 +30,6 @@ router.get("/admin", authMiddleware, authorizeRoles("admin"), async (req, res, n
   }
 });
 
-// ADMIN: update order status
-// Body: { status: "pending|paid|shipped|delivered|cancelled" }
 router.patch("/:orderId/status", authMiddleware, authorizeRoles("admin"), async (req, res, next) => {
   try {
     const { orderId } = req.params;
@@ -68,7 +64,6 @@ router.post("/", authMiddleware, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Items array is required" });
     }
 
-    // No stock checks or transactions
     const hydratedItems = [];
     for (let index = 0; index < items.length; index++) {
       const { item, quantity } = items[index] || {};

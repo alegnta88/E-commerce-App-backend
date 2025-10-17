@@ -15,7 +15,6 @@ async function recalculateCartTotals(cart) {
   cart.totalPrice = total;
 }
 
-// Get current user's cart
 router.get("/", authMiddleware, async (req, res, next) => {
   try {
     const cart = await Cart.findOne({ user: req.user._id })
@@ -27,8 +26,6 @@ router.get("/", authMiddleware, async (req, res, next) => {
   }
 });
 
-// Add item to cart
-// Body: { item: ObjectId, quantity: Number }
 router.post("/items", authMiddleware, async (req, res, next) => {
   try {
     const { item, quantity } = req.body || {};
@@ -61,8 +58,6 @@ router.post("/items", authMiddleware, async (req, res, next) => {
   }
 });
 
-// Update quantity of a cart line
-// Body: { quantity: Number }
 router.patch("/items/:itemId", authMiddleware, async (req, res, next) => {
   try {
     const { itemId } = req.params;
@@ -97,7 +92,6 @@ router.patch("/items/:itemId", authMiddleware, async (req, res, next) => {
   }
 });
 
-// Remove an item from cart
 router.delete("/items/:itemId", authMiddleware, async (req, res, next) => {
   try {
     const { itemId } = req.params;
@@ -120,7 +114,6 @@ router.delete("/items/:itemId", authMiddleware, async (req, res, next) => {
   }
 });
 
-// Clear cart
 router.delete("/", authMiddleware, async (req, res, next) => {
   try {
     const cart = await Cart.findOne({ user: req.user._id });

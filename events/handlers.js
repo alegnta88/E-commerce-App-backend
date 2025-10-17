@@ -1,7 +1,5 @@
 const bus = require("./eventBus");
 
-// Example handlers: log events, derive metrics, send notifications later
-
 bus.on("order.created", (payload) => {
   console.log("[EDA] order.created", {
     orderId: payload.orderId,
