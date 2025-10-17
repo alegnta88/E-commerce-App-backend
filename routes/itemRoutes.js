@@ -4,6 +4,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const Item = require("../models/item");
+const bus = require("../events/handlers");
 const authMiddleware = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/authorizeRoles");
 
@@ -87,6 +88,7 @@ router.post(
     try {
       const { sku, stock, isActive } = req.body;
       const item = await Item.create({ name, price, description, image: imagePath, sku, stock, isActive });
+      bus.emit("item.stockChanged", { itemId: item._id, stock: item.stock });
       res.status(201).json(item);
     } catch (err) {
       next(err);
@@ -115,6 +117,9 @@ router.put(
         const error = new Error("Item not found");
         error.statusCode = 404;
         throw error;
+      }
+      if (typeof updateData.stock === "number") {
+        bus.emit("item.stockChanged", { itemId: updatedItem._id, stock: updatedItem.stock });
       }
       res.json(updatedItem);
     } catch (err) {

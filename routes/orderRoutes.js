@@ -4,6 +4,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/authorizeRoles");
 const Order = require("../models/order");
 const Item = require("../models/item");
+const bus = require("../events/handlers");
 
 // GET current user's orders
 router.get("/", authMiddleware, async (req, res, next) => {
@@ -31,7 +32,7 @@ router.get("/admin", authMiddleware, authorizeRoles("admin"), async (req, res, n
   }
 });
 
-// ADMIN: update order status; restock on cancel
+// ADMIN: update order status
 // Body: { status: "pending|paid|shipped|delivered|cancelled" }
 router.patch("/:orderId/status", authMiddleware, authorizeRoles("admin"), async (req, res, next) => {
   try {
@@ -45,34 +46,14 @@ router.patch("/:orderId/status", authMiddleware, authorizeRoles("admin"), async 
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    // If cancelling and previous status was not cancelled, restock items
-    if (status === "cancelled" && order.status !== "cancelled") {
-      const session = await Item.startSession();
-      session.startTransaction();
-      try {
-        for (const line of order.items) {
-          const dbItem = await Item.findById(line.item).session(session);
-          if (!dbItem) continue;
-          dbItem.stock += line.quantity;
-          await dbItem.save({ session });
-        }
-        order.status = status;
-        await order.save({ session });
-        await session.commitTransaction();
-        session.endSession();
-      } catch (err) {
-        await session.abortTransaction();
-        session.endSession();
-        throw err;
-      }
-    } else {
-      order.status = status;
-      await order.save();
-    }
+    // No stock adjustments while stock functionality is disabled
+    order.status = status;
+    await order.save();
 
     const populated = await Order.findById(order._id)
       .populate("user", "name email")
       .populate("items.item", "name price");
+    bus.emit("order.statusChanged", { orderId: order._id, status: order.status });
     res.json({ success: true, order: populated });
   } catch (err) {
     next(err);
@@ -87,62 +68,32 @@ router.post("/", authMiddleware, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Items array is required" });
     }
 
-    // Use a transaction to validate stock and decrement atomically
-    const session = await Item.startSession();
-    session.startTransaction();
-    try {
-      const hydratedItems = [];
-      for (let index = 0; index < items.length; index++) {
-        const { item, quantity } = items[index] || {};
-        if (!item || typeof quantity !== "number" || quantity <= 0) {
-          const error = new Error(`Invalid item at index ${index}`);
-          error.statusCode = 400;
-          throw error;
-        }
-
-        const dbItem = await Item.findOne({ _id: item, isActive: true }).session(session);
-        if (!dbItem) {
-          const error = new Error(`Item not found at index ${index}`);
-          error.statusCode = 404;
-          throw error;
-        }
-
-        if (dbItem.stock < quantity) {
-          const error = new Error(`Insufficient stock for item at index ${index}`);
-          error.statusCode = 400;
-          throw error;
-        }
-
-        dbItem.stock -= quantity;
-        await dbItem.save({ session });
-
-        hydratedItems.push({
-          item: dbItem._id,
-          quantity,
-          price: dbItem.price,
-        });
+    // No stock checks or transactions
+    const hydratedItems = [];
+    for (let index = 0; index < items.length; index++) {
+      const { item, quantity } = items[index] || {};
+      if (!item || typeof quantity !== "number" || quantity <= 0) {
+        const error = new Error(`Invalid item at index ${index}`);
+        error.statusCode = 400;
+        throw error;
       }
-
-      const totalAmount = hydratedItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
-
-      const order = await Order.create([
-        {
-          user: req.user._id,
-          items: hydratedItems,
-          totalAmount,
-        },
-      ], { session });
-
-      await session.commitTransaction();
-      session.endSession();
-
-      const created = await Order.findById(order[0]._id).populate("items.item", "name price");
-      res.status(201).json({ success: true, order: created });
-    } catch (txnErr) {
-      await session.abortTransaction();
-      session.endSession();
-      throw txnErr;
+      const dbItem = await Item.findOne({
+        _id: item,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }],
+      });
+      if (!dbItem) {
+        const error = new Error(`Item not found at index ${index}`);
+        error.statusCode = 404;
+        throw error;
+      }
+      hydratedItems.push({ item: dbItem._id, quantity, price: dbItem.price });
     }
+
+    const totalAmount = hydratedItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
+    const orderDoc = await Order.create({ user: req.user._id, items: hydratedItems, totalAmount });
+    const created = await Order.findById(orderDoc._id).populate("items.item", "name price");
+    bus.emit("order.created", { orderId: created._id, userId: req.user._id, totalAmount, items: hydratedItems });
+    return res.status(201).json({ success: true, order: created });
   } catch (err) {
     next(err);
   }

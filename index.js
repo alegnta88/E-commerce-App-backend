@@ -11,6 +11,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoute");
 const authRoutes = require("./routes/authRoutes");
 const app = express();
+require("./events/handlers");
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(helmet());

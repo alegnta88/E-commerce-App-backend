@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const Item = require("../models/item");
 const Cart = require("../models/cart");
+const bus = require("../events/handlers");
 
 async function recalculateCartTotals(cart) {
   let total = 0;
@@ -35,7 +36,7 @@ router.post("/items", authMiddleware, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Invalid item or quantity" });
     }
 
-    const dbItem = await Item.findOne({ _id: item, isActive: true });
+    const dbItem = await Item.findOne({ _id: item, $or: [{ isActive: true }, { isActive: { $exists: false } }] });
     if (!dbItem) return res.status(404).json({ success: false, message: "Item not found" });
 
     let cart = await Cart.findOne({ user: req.user._id });
@@ -43,10 +44,6 @@ router.post("/items", authMiddleware, async (req, res, next) => {
 
     const existing = cart.items.find((l) => String(l.item) === String(dbItem._id));
     const newQty = (existing ? existing.quantity : 0) + quantity;
-    if (dbItem.stock < newQty) {
-      return res.status(400).json({ success: false, message: "Insufficient stock" });
-    }
-
     if (existing) {
       existing.quantity = newQty;
     } else {
@@ -57,6 +54,7 @@ router.post("/items", authMiddleware, async (req, res, next) => {
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.item", "name price stock image");
+    bus.emit("cart.updated", { userId: req.user._id, itemsCount: populated.items.length, totalPrice: populated.totalPrice });
     res.status(201).json({ success: true, cart: populated });
   } catch (err) {
     next(err);
@@ -85,9 +83,6 @@ router.patch("/items/:itemId", authMiddleware, async (req, res, next) => {
     if (quantity === 0) {
       cart.items = cart.items.filter((l) => String(l.item) !== String(itemId));
     } else {
-      if (dbItem.stock < quantity) {
-        return res.status(400).json({ success: false, message: "Insufficient stock" });
-      }
       line.quantity = quantity;
     }
 
@@ -95,6 +90,7 @@ router.patch("/items/:itemId", authMiddleware, async (req, res, next) => {
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.item", "name price stock image");
+    bus.emit("cart.updated", { userId: req.user._id, itemsCount: populated.items.length, totalPrice: populated.totalPrice });
     res.json({ success: true, cart: populated });
   } catch (err) {
     next(err);
@@ -117,6 +113,7 @@ router.delete("/items/:itemId", authMiddleware, async (req, res, next) => {
     await recalculateCartTotals(cart);
     await cart.save();
     const populated = await Cart.findById(cart._id).populate("items.item", "name price stock image");
+    bus.emit("cart.updated", { userId: req.user._id, itemsCount: populated.items.length, totalPrice: populated.totalPrice });
     res.json({ success: true, cart: populated });
   } catch (err) {
     next(err);
@@ -131,6 +128,7 @@ router.delete("/", authMiddleware, async (req, res, next) => {
     cart.items = [];
     cart.totalPrice = 0;
     await cart.save();
+    bus.emit("cart.updated", { userId: req.user._id, itemsCount: cart.items.length, totalPrice: cart.totalPrice });
     res.json({ success: true, cart });
   } catch (err) {
     next(err);
