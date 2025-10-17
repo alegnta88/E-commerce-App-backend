@@ -85,7 +85,8 @@ router.post(
     const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
-      const item = await Item.create({ name, price, description, image: imagePath });
+      const { sku, stock, isActive } = req.body;
+      const item = await Item.create({ name, price, description, image: imagePath, sku, stock, isActive });
       res.status(201).json(item);
     } catch (err) {
       next(err);
@@ -101,7 +102,8 @@ router.put(
   upload.single("image"),
   async (req, res, next) => {
     const { name, price, description } = req.body;
-    const updateData = { name, price, description };
+    const { sku, stock, isActive } = req.body;
+    const updateData = { name, price, description, sku, stock, isActive };
 
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
