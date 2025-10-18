@@ -13,11 +13,11 @@ COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .
 
-RUN mkdir -p uploads && addgroup -S nodejs && adduser -S node -G nodejs && chown -R node:node /app
+COPY .env .
+
+RUN mkdir -p uploads && chown -R node:node /app
 USER node
 
 EXPOSE 5000
 
 CMD ["node", "index.js"]
-
-
