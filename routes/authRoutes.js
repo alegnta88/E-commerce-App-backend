@@ -8,7 +8,19 @@ const User = require("../models/user");
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1h";
 
-router.post("/register", async (req, res, next) => {
+const loginLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,  
+  max: 2,
+  message: "Too many login attempts. Try again later."
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,  
+  max: 2,
+  message: "Too many register attempts. Try again later."
+});
+
+router.post("/register", registerLimiter, async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -49,12 +61,6 @@ router.post("/register", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  
-  max: 2,
-  message: "Too many login attempts. Try again later."
 });
 
 router.post("/login", loginLimiter, async (req, res, next) => {
