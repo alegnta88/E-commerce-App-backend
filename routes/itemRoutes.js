@@ -69,7 +69,7 @@ router.get("/:id", authMiddleware, async (req, res, next) => {
 router.post(
   "/",
   authMiddleware,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "user"),
   upload.single("image"),
   async (req, res, next) => {
     const { name, price, description } = req.body;
@@ -96,7 +96,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  authorizeRoles("admin"),
+  authorizeRoles("admin",),
   upload.single("image"),
   async (req, res, next) => {
     const { name, price, description } = req.body;

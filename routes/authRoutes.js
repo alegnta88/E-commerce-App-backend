@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/user");
-const Role = require("../models/role");
 
+const Role = require("../models/role");
+const User = require("../models/user");
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1h";
 
@@ -43,7 +43,8 @@ router.post("/register", async (req, res, next) => {
         email: user.email,
         role: userRole.name
       },
-      token
+      token,
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
     next(err);
