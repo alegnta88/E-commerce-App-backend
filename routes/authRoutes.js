@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
+const rateLimit = require("express-rate-limit");
 const Role = require("../models/role");
 const User = require("../models/user");
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -51,34 +51,31 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  
+  max: 2,
+  message: "Too many login attempts. Try again later."
+});
+
+router.post("/login", loginLimiter, async (req, res, next) => {
+
   try {
     const { email, password } = req.body;
-    console.log("Login attempt:", { email, password });
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
 
     const user = await User.findOne({ email }).populate("role");
-    if (user) {
-      const { _id, name, email, role } = user;
-      console.log("User found in DB: ", { _id, name, email, role });
-    }
     
     if (!user) {
       console.log("No user found with email:", email);
       return res.status(401).json({ message: "Invalid email or password" });
     }
-    const isMatch1 = await user.matchPassword(password);
-    console.log("Password match result (method 1):", isMatch1);
-
-    const isMatch2 = await bcrypt.compare(password, user.password);
-    console.log("Password match result (method 2):", isMatch2);
+    const isMatchpass = await user.matchPassword(password);
+    console.log("Password match result (method 1):", isMatchpass);
     
-    const isMatch = isMatch1 || isMatch2;
-    
-    if (!isMatch) {
+    if (!isMatchpass) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
